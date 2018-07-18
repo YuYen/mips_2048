@@ -1,6 +1,34 @@
 #####################################################################
 #####################################################################
 
+.macro	COPY_SEQUENCE(%tar, %src, %len)
+	li	$a0,	0
+	move	$a1,	%tar
+	move	$a2,	%src
+	COPY_SEQUENCE_next:
+		lw	$a3,	($a2)
+		sw	$a3,	($a1)
+		addi	$a0,	$a0,	1
+		addi	$a1,	$a1,	4
+		addi	$a2,	$a2,	4
+		blt	$a0,	%len,	COPY_SEQUENCE_next
+.end_macro
+
+.macro	SLEEP(%val)
+	li	$v0,	32
+	li	$a0,	%val
+	syscall
+.end_macro
+
+.macro	WAIT_NEXT_KEY(%val)
+	lw	$a1,	keybroad_addr
+	WAIT_NEXT_KEY_wait:
+		lw	%val,	($a1)
+		SLEEP(100)
+		beq	%val,	$zero,	WAIT_NEXT_KEY_wait
+	lw	%val,	4($a1)
+.end_macro
+
 .macro	SHIFT_WORD(%add, %pos, %res)
 	sll	$a0,	%pos,	2
 	add	%res,	%add,	$a0
@@ -78,6 +106,7 @@ down_index:	.space	64
 ### constants
 mat_nrow:	.word	4	# total number of row
 mat_length:	.word	16
+keybroad_addr:	.word	0xffff0000
 
 msg_mat_boundry:	.asciiz	"================================="
 
@@ -106,11 +135,15 @@ Main:
 	la	$a0,	up_index
 	jal	moveOperation
 	jal	printMainMatrix		
-	
-	
 
 
+	la	$t0,	tmp_matrix
+	la	$t1,	main_matrix
+	lw	$t2,	mat_length
+	COPY_SEQUENCE($t0, $t1,	$t2)
 
+	WAIT_NEXT_KEY($t0)
+	PRINT_CHAR($t0)
 
 #	la	$a0,	left_index
 #	jal	printSequenceByIndex
