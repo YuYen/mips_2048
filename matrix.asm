@@ -1,17 +1,17 @@
 #####################################################################
 #####################################################################
 
-.macro	COPY_SEQUENCE(%tar, %src, %len)
+.macro	COPY_SEQ(%tar, %src, %len)
 	li	$a0,	0
 	move	$a1,	%tar
 	move	$a2,	%src
-	COPY_SEQUENCE_next:
+	COPY_SEQ_next:
 		lw	$a3,	($a2)
 		sw	$a3,	($a1)
 		addi	$a0,	$a0,	1
 		addi	$a1,	$a1,	4
 		addi	$a2,	$a2,	4
-		blt	$a0,	%len,	COPY_SEQUENCE_next
+		blt	$a0,	%len,	COPY_SEQ_next
 .end_macro
 
 .macro	SLEEP(%val)
@@ -71,6 +71,12 @@
 	syscall
 .end_macro
 
+.macro	PRINT_CHARI (%val)
+	li	$v0,	11
+	li	$a0,	%val
+	syscall
+.end_macro
+
 .macro	PRINT_CHAR (%val)
 	li	$v0,	11
 	move	$a0,	%val
@@ -116,42 +122,114 @@ msg_mat_boundry:	.asciiz	"================================="
 Main:
 
 	jal	initializeIndex
+	jal	addNextRandom2Matrix
+	jal	printMainMatrix	
+
+loop:
+	
+	la	$t0,	main_matrix
+	la	$t1,	tmp_matrix
+	lw	$t2,	mat_length
+	COPY_SEQ($t1, $t0, $t2)
+	
+	WAIT_NEXT_KEY($t0)
+	PRINT_CHAR($t0)
+	PRINT_CHARI(0xa)
+	bne	$t0,	0x77,	check_down	# w = up
+	la	$a0,	up_index
+	j	move_direction
+	
+check_down:
+	bne	$t0,	0x73,	check_left	# s = down
+	la	$a0,	down_index
+	j	move_direction
+	
+check_left:
+	bne	$t0,	0x61,	check_right	# a = left
+	la	$a0,	left_index
+	j	move_direction
+
+check_right:
+	bne	$t0,	0x64,	loop		# d = right
+	la	$a0,	right_index
+	j	move_direction
+
+move_direction:	
+	jal	moveOperation
+	la	$a0,	main_matrix
+	la	$a1,	tmp_matrix
+	lw	$a2,	mat_length
+	jal	compareSequence
+	bne	$v0,	$zero,	loop
+	jal	addNextRandom2Matrix
+	
+	### check GG condition
+	
+	jal	printMainMatrix	
+	j	loop
+	
 
 #loop:
-	jal	addNextRandom2Matrix
-	jal	addNextRandom2Matrix
-	jal	addNextRandom2Matrix
-	jal	addNextRandom2Matrix
-	jal	addNextRandom2Matrix
+#	jal	addNextRandom2Matrix
+#	jal	addNextRandom2Matrix
+#	jal	addNextRandom2Matrix
+#	jal	addNextRandom2Matrix
+#	jal	addNextRandom2Matrix
 #	jal	printMainMatrix
 #	j	loop
 
-
-	jal	printMainMatrix
-	la	$a0,	left_index
-	jal	moveOperation
-	jal	printMainMatrix	
-
-	la	$a0,	up_index
-	jal	moveOperation
-	jal	printMainMatrix		
-
-
-	la	$t0,	tmp_matrix
-	la	$t1,	main_matrix
-	lw	$t2,	mat_length
-	COPY_SEQUENCE($t0, $t1,	$t2)
-
-	WAIT_NEXT_KEY($t0)
-	PRINT_CHAR($t0)
-
+######### test move
+#	jal	printMainMatrix
 #	la	$a0,	left_index
-#	jal	printSequenceByIndex
+#	jal	moveOperation
+#	jal	printMainMatrix	
+#
+#	la	$a0,	up_index
+#	jal	moveOperation
+#	jal	printMainMatrix		
+
+#########
+#	la	$t0,	tmp_matrix
+#	la	$t1,	main_matrix
+#	lw	$t2,	mat_length
+#	COPY_SEQ($t0, $t1, $t2)
+#
+#	la	$a0,	tmp_matrix
+#	la	$a1,	main_matrix
+#	lw	$a2,	mat_length
+#	jal compareSequence
+	
+
+
 
 
 Exit:
 	li	$v0,	10
 	syscall
+
+
+
+###
+# input: $a0: src1, $a1: src2,	$a2: length
+# output: $v0: 0:different, 1:the same
+compareSequence:
+	li	$t0,	0
+	li	$v0,	1
+	compareSequence_loop:
+		lw	$t1,	($a0)
+		lw	$t2,	($a1)
+		beq	$t1,	$t2,	compareSequence_next
+		li	$v0,	0
+		j	compareSequence_return
+		
+		compareSequence_next:
+		addi	$t0,	$t0,	1
+		addi	$a0,	$a0,	4
+		addi	$a1,	$a1,	4
+		blt	$t0,	$a2,	compareSequence_loop
+		
+compareSequence_return:
+	jr	$ra
 
 ####################################################################
 ############################# function #############################

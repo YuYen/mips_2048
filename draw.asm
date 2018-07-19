@@ -1,9 +1,8 @@
 
 	.text
 	li	$t0,	32
-	li	$t1,	0xFFFFFFFF
+	li	$t1,	0x00FFFFFF
 	
-#	mul	$t2,	$t0,	$t0
 	move	$t2,	$t0
 	sll	$t2,	$t2,	2
 	add	$t2,	$t2,	$gp

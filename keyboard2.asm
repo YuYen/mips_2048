@@ -14,10 +14,10 @@
 	li	$t0,	0xffff0000
 
 wait:	
-	lw	$t1,	($t0)
+	lw	$t1,	($t0)		# check whether keybroad used
 	SLEEP(100)
 	beq	$t1,	$zero,	wait
 
-	lw	$t1,	4($t0)
+	lw	$t1,	4($t0)		# load the typed word
 	PRINT_CHAR($t1)
 	j	wait
