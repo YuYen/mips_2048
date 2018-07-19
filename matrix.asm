@@ -1,6 +1,57 @@
 #####################################################################
 #####################################################################
 
+.macro	GET_COLOR_SIZE(%val, %color, %size)
+	li	$a0,	2
+	li	$a2,	0
+
+GET_COLOR_SIZE_loop:	
+	and	$a1,	$a0,	%val
+	sll	$a0,	$a0,	1
+	addi	$a2,	$a2,	1
+	beq	$a1,	$zero,	GET_COLOR_SIZE_loop
+	
+	addi	$a2,	$a2,	-1
+	lw	$a0,	level_count
+	divu	$a2,	$a0
+	mfhi	%size
+	mflo	%color
+	la	$a1,	level_size
+	LOAD_ARRAY_ELEMENT($a1,	%size, %size)
+	la	$a1,	level_color
+	LOAD_ARRAY_ELEMENT($a1,	%color, %color)
+.end_macro
+
+.macro	GET_PLOT_ADDRESS(%x, %y, %addr)
+	lw	$a0,	display_width
+	mulu 	%addr,	%y,	$a0
+	addu	%addr,	%addr,	%x
+	sll	%addr,	%addr,	2
+	addu	%addr,	%addr,	$gp
+.end_macro
+
+.macro	DRAW_SEGMENT_BY_POINT(%x, %y, %len, %color)
+	GET_PLOT_ADDRESS(%x, %y, $a1)
+	li	$a0,	0
+	move	$a2,	%len
+	DRAW_SEGMENT_loop:
+		sw	%color,	($a1)
+		addi	$a0,	$a0,	1
+		addi	$a1,	$a1,	4
+		blt	$a0,	$a2,	DRAW_SEGMENT_loop
+.end_macro
+
+.macro	DRAW_SEGMENT_BY_ADDR(%addr, %len, %color)
+	li	$a0,	0
+	move	$a1,	%addr
+	move	$a2,	%len
+	DRAW_SEGMENT_loop:
+		sw	%color,	($a1)
+		addi	$a0,	$a0,	1
+		addi	$a1,	$a1,	4
+		blt	$a0,	$a2,	DRAW_SEGMENT_loop
+.end_macro
+
 .macro	COPY_SEQ(%tar, %src, %len)
 	li	$a0,	0
 	move	$a1,	%tar
@@ -95,7 +146,7 @@
 main_matrix:	.space	64
 tmp_matrix:	.space	64
 
-tmp_value:	.space	64
+# tmp_value:	.space	64
 tmp_moving:	.space	64
 
 #test_value:	.word	2, 2, 4, 0
@@ -114,6 +165,15 @@ mat_nrow:	.word	4	# total number of row
 mat_length:	.word	16
 keybroad_addr:	.word	0xffff0000
 
+display_width:	.word	64
+frame_width:	.word	2
+frame_color:	.word	0x6E2C00
+back_color:	.word	0x000000
+
+level_count:	.word	3
+level_color:	.word	0xFF0000, 0x00FF00, 0x0000FF
+level_size:	.word	1, 2, 4
+
 msg_mat_boundry:	.asciiz	"================================="
 
 #####################################################################
@@ -124,6 +184,8 @@ Main:
 	jal	initializeIndex
 	jal	addNextRandom2Matrix
 	jal	printMainMatrix	
+	jal	drawFrame
+	jal	drawMainMat
 
 loop:
 	
@@ -164,7 +226,7 @@ move_direction:
 	jal	addNextRandom2Matrix
 	
 	### check GG condition
-	
+	jal	drawMainMat
 	jal	printMainMatrix	
 	j	loop
 	
@@ -509,3 +571,154 @@ moveOperation_loop1:
 	addi	$sp,	$sp,	12
 	jr	$ra
 
+
+# input: $a0: position index
+# output: $v0:x, $v1:y
+index2Position:
+	lw	$t0,	mat_nrow
+	divu	$a0,	$t0
+	mfhi	$t1	# $t1=R
+	mflo	$t2	# $t2=Q
+	lw	$t3,	display_width
+	lw	$t4,	frame_width
+	sll	$t5,	$t4,	1	
+	sub	$t3,	$t3,	$t5	# $t3: width w/o frame
+	divu	$t3,	$t0
+	mflo	$t6			# $t6: mat width
+	srl	$t7,	$t6,	1	# $t7: center offset
+	add	$t7,	$t7,	$t4
+	mul	$v0,	$t1,	$t6
+	add	$v0,	$v0,	$t7
+	mul	$v1,	$t2,	$t6
+	add	$v1,	$v1,	$t7
+	
+	jr	$ra
+
+
+
+########################################################
+### draw
+drawFrame:
+	li	$t0,	0	
+	li	$t1,	0	
+	lw	$t2,	display_width
+	sll	$t5,	$t2,	1
+	lw	$t3,	frame_color
+	DRAW_SEGMENT_BY_POINT($t0, $t1, $t5, $t3)
+	
+	lw	$t6,	frame_width
+	sub	$t1,	$t2,	$t6
+	DRAW_SEGMENT_BY_POINT($t0, $t1, $t5, $t3)
+
+	sll	$t4,	$t6,	1
+drawFrame_loop:
+	DRAW_SEGMENT_BY_POINT($t1, $t0, $t4, $t3)
+	addi	$t0,	$t0,	1
+	blt	$t0,	$t2,	drawFrame_loop
+	
+	jr	$ra
+
+
+### drawSquare
+# input: $a0:x, $a1:y, $a2:size, $a3:color
+drawSquare:
+	sub	$t0,	$a0,	$a2	# $t0: top-left x
+	sub	$t1,	$a1,	$a2	# $t1: top-left y
+	GET_PLOT_ADDRESS($t0, $t1, $a1)
+	move	$t2,	$a0
+	sll	$t2,	$t2,	2	# $t2: display_width in bytes
+	move	$t0,	$a1		# $t0: top-left address
+	move	$t3,	$a3		# $t3: color
+	sll	$t1,	$a2,	1
+	addi	$t1,	$t1,	1	# $t1: length
+	li	$t4,	0
+
+drawSquare_loop:
+	DRAW_SEGMENT_BY_ADDR($t0, $t1, $t3)
+	addi	$t4,	$t4,	1
+	add	$t0,	$t0,	$t2
+	blt	$t4,	$t1,	drawSquare_loop
+
+	jr	$ra
+
+removeMoved:
+	la	$t0,	tmp_moving
+	lw	$t1,	mat_nrow
+	li	$t2,	0	# i
+	li	$t3,	0	# 
+loop0:
+	
+	
+
+### drawMainMat
+drawMainMat:
+	addi	$sp,	$sp,	-24
+	sw	$ra,	0($sp)
+	sw	$s0,	4($sp)
+	sw	$s1,	8($sp)
+	sw	$s2,	12($sp)
+	sw	$s3,	16($sp)
+	sw	$s4,	20($sp)
+	
+	la	$s0,	main_matrix
+	lw	$s1,	mat_length
+	li	$s2,	0
+	
+	# draw background
+	jal	cleanDisplay
+	jal	drawFrame
+#	lw	$a2,	display_width
+#	srl	$a0,	$a2,	1
+#	srl	$a1,	$a2,	1
+#	srl	$a2,	$a2,	1
+#	lw	$a3,	frame_width
+#	sub	$a2,	$a2,	$a3
+#	lw	$a3,	back_color
+#	jal	drawSquare
+	# input: $a0:x, $a1:y, $a2:size, $a3:color
+	
+
+drawMainMat_loop:
+
+	LOAD_ARRAY_ELEMENT($s0, $s2, $t0)
+	beq	$t0,	$zero,	drawMainMat_next
+	
+	GET_COLOR_SIZE($t0, $s3, $s4)
+	
+	move	$a0,	$s2
+	jal	index2Position
+	
+	move	$a0,	$v0
+	move	$a1,	$v1
+	move	$a2,	$s4
+	move	$a3,	$s3
+	jal	drawSquare
+	
+drawMainMat_next:
+	addi	$s2,	$s2,	1
+	blt	$s2,	$s1,	drawMainMat_loop
+	
+	lw	$ra,	0($sp)
+	lw	$s0,	4($sp)
+	lw	$s1,	8($sp)
+	lw	$s2,	12($sp)
+	lw	$s3,	16($sp)
+	lw	$s4,	20($sp)
+	addi	$sp,	$sp,	24
+	jr	$ra
+	
+### clean display to back_color
+cleanDisplay:
+	move	$t0,	$gp
+	lw	$t1,	display_width
+	mul	$t1,	$t1,	$t1
+	sll	$t1,	$t1,	2
+	add	$t1,	$t0,	$t1
+	lw	$t2,	back_color
+	
+cleanDisplay_loop:
+	sw	$t2,	($t0)
+	addi	$t0,	$t0,	4
+	blt	$t0,	$t1,	cleanDisplay_loop
+	
+	jr	$ra

@@ -36,6 +36,7 @@ mat_length:	.word	16
 display_width:	.word	64
 frame_width:	.word	2
 frame_color:	.word	0x6E2C00
+back_color:	.word	0x000000
 
 level_color:	.word	0xFF0000, 0x00FF00, 0x0000FF
 level_size:	.word	1, 2, 4
@@ -62,12 +63,12 @@ loop:
 	addi	$s0,	$s0,	1
 	blt	$s0,	$s1,	loop
 
-
 exit:
 	li	$v0,	10
 	syscall
 
 # input: $a0: position index
+# output: $v0:x, $v1:y
 index2Position:
 	lw	$t0,	mat_nrow
 	divu	$a0,	$t0
@@ -111,6 +112,21 @@ drawFrame_loop:
 	
 	jr	$ra
 
+### clean display to back_color
+cleanDisplay:
+	move	$t0,	$gp
+	lw	$t1,	display_width
+	mul	$t1,	$t1,	$t1
+	sll	$t1,	$t1,	2
+	add	$t1,	$t0,	$t1
+	lw	$t2,	back_color
+	
+cleanDisplay_loop:
+	sw	$t2,	($t0)
+	addi	$t0,	$t0,	4
+	blt	$t0,	$t1,	cleanDisplay_loop
+	
+	jr	$ra
 
 ### drawSquare
 # input: $a0:x, $a1:y, $a2:size, $a3:color
