@@ -66,16 +66,25 @@
 .end_macro
 
 .macro	SLEEP(%val)
-	li	$v0,	32
-	li	$a0,	%val
-	syscall
+	li	$a0,	0
+	loopx:
+		nop
+		addi	$a0,	$a0,	1
+		blt	$a0,	%val,	loopx
 .end_macro
 
 .macro	WAIT_NEXT_KEY(%val)
 	lw	$a1,	keybroad_addr
+
+#	li	$a3,	1000000
+#	li	$a3,	100000
 	WAIT_NEXT_KEY_wait:
+		SLEEP(100000)
+#		li	$a2,	0
+#		loopx:
+#			addi	$a2,	$a2,	1
+#			blt	$a2,	$a3,	loopx
 		lw	%val,	($a1)
-		SLEEP(50)
 		beq	%val,	$zero,	WAIT_NEXT_KEY_wait
 	lw	%val,	4($a1)
 .end_macro
