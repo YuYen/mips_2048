@@ -5,11 +5,11 @@
 	li	$a0,	2
 	li	$a2,	0
 
-GET_COLOR_SIZE_loop:	
-	and	$a1,	$a0,	%val
-	sll	$a0,	$a0,	1
-	addi	$a2,	$a2,	1
-	beq	$a1,	$zero,	GET_COLOR_SIZE_loop
+	GET_COLOR_SIZE_loop:	
+		and	$a1,	$a0,	%val
+		sll	$a0,	$a0,	1
+		addi	$a2,	$a2,	1
+		beq	$a1,	$zero,	GET_COLOR_SIZE_loop
 	
 	addi	$a2,	$a2,	-1
 	lw	$a0,	level_count
@@ -75,7 +75,7 @@ GET_COLOR_SIZE_loop:
 	lw	$a1,	keybroad_addr
 	WAIT_NEXT_KEY_wait:
 		lw	%val,	($a1)
-		SLEEP(100)
+		SLEEP(50)
 		beq	%val,	$zero,	WAIT_NEXT_KEY_wait
 	lw	%val,	4($a1)
 .end_macro
@@ -159,6 +159,10 @@ left_index:	.space	64
 right_index:	.space 	64
 up_index:	.space	64
 down_index:	.space	64
+left_addr:	.space	64
+right_addr:	.space 	64
+up_addr:	.space	64
+down_addr:	.space	64
 
 ### constants
 mat_nrow:	.word	4	# total number of row
@@ -198,22 +202,22 @@ loop:
 	PRINT_CHAR($t0)
 	PRINT_CHARI(0xa)
 	bne	$t0,	0x77,	check_down	# w = up
-	la	$a0,	up_index
+	la	$a0,	up_addr
 	j	move_direction
 	
 check_down:
 	bne	$t0,	0x73,	check_left	# s = down
-	la	$a0,	down_index
+	la	$a0,	down_addr
 	j	move_direction
 	
 check_left:
 	bne	$t0,	0x61,	check_right	# a = left
-	la	$a0,	left_index
+	la	$a0,	left_addr
 	j	move_direction
 
 check_right:
 	bne	$t0,	0x64,	loop		# d = right
-	la	$a0,	right_index
+	la	$a0,	right_addr
 	j	move_direction
 
 move_direction:	
@@ -230,40 +234,6 @@ move_direction:
 	jal	printMainMatrix	
 	j	loop
 	
-
-#loop:
-#	jal	addNextRandom2Matrix
-#	jal	addNextRandom2Matrix
-#	jal	addNextRandom2Matrix
-#	jal	addNextRandom2Matrix
-#	jal	addNextRandom2Matrix
-#	jal	printMainMatrix
-#	j	loop
-
-######### test move
-#	jal	printMainMatrix
-#	la	$a0,	left_index
-#	jal	moveOperation
-#	jal	printMainMatrix	
-#
-#	la	$a0,	up_index
-#	jal	moveOperation
-#	jal	printMainMatrix		
-
-#########
-#	la	$t0,	tmp_matrix
-#	la	$t1,	main_matrix
-#	lw	$t2,	mat_length
-#	COPY_SEQ($t0, $t1, $t2)
-#
-#	la	$a0,	tmp_matrix
-#	la	$a1,	main_matrix
-#	lw	$a2,	mat_length
-#	jal compareSequence
-	
-
-
-
 
 Exit:
 	li	$v0,	10
@@ -338,15 +308,34 @@ initializeIndex:
 		blt	$t3,	$t1,	initializeIndex_loop1
 	
 	# convert order index to actual address
-	la	$a0,	left_index
+	la	$t0,	left_index
+	lw	$s0,	mat_length
+	la	$t1,	left_addr
+	COPY_SEQ($t1, $t0, $s0)
+	move	$a0,	$t1
 	jal	indexArray2AddressArray
-	la	$a0,	right_index
-	jal	indexArray2AddressArray
-	la	$a0,	up_index
-	jal	indexArray2AddressArray
-	la	$a0,	down_index
-	jal	indexArray2AddressArray	
 	
+	la	$t0,	right_index
+	lw	$s0,	mat_length
+	la	$t1,	right_addr
+	COPY_SEQ($t1, $t0, $s0)
+	move	$a0,	$t1
+	jal	indexArray2AddressArray
+	
+	la	$t0,	up_index
+	lw	$s0,	mat_length
+	la	$t1,	up_addr
+	COPY_SEQ($t1, $t0, $s0)
+	move	$a0,	$t1
+	jal	indexArray2AddressArray
+	
+	la	$t0,	down_index
+	lw	$s0,	mat_length
+	la	$t1,	down_addr
+	COPY_SEQ($t1, $t0, $s0)
+	move	$a0,	$t1
+	jal	indexArray2AddressArray
+
 	RESTORE_RA
 	jr	$ra
 
