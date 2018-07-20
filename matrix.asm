@@ -1,159 +1,11 @@
-#####################################################################
-#####################################################################
-
-.macro	GET_COLOR_SIZE(%val, %color, %size)
-	li	$a0,	2
-	li	$a2,	0
-
-	GET_COLOR_SIZE_loop:	
-		and	$a1,	$a0,	%val
-		sll	$a0,	$a0,	1
-		addi	$a2,	$a2,	1
-		beq	$a1,	$zero,	GET_COLOR_SIZE_loop
-	
-	addi	$a2,	$a2,	-1
-	lw	$a0,	level_count
-	divu	$a2,	$a0
-	mfhi	%size
-	mflo	%color
-	la	$a1,	level_size
-	LOAD_ARRAY_ELEMENT($a1,	%size, %size)
-	la	$a1,	level_color
-	LOAD_ARRAY_ELEMENT($a1,	%color, %color)
-.end_macro
-
-.macro	GET_PLOT_ADDRESS(%x, %y, %addr)
-	lw	$a0,	display_width
-	mulu 	%addr,	%y,	$a0
-	addu	%addr,	%addr,	%x
-	sll	%addr,	%addr,	2
-	addu	%addr,	%addr,	$gp
-.end_macro
-
-.macro	DRAW_SEGMENT_BY_POINT(%x, %y, %len, %color)
-	GET_PLOT_ADDRESS(%x, %y, $a1)
-	li	$a0,	0
-	move	$a2,	%len
-	DRAW_SEGMENT_loop:
-		sw	%color,	($a1)
-		addi	$a0,	$a0,	1
-		addi	$a1,	$a1,	4
-		blt	$a0,	$a2,	DRAW_SEGMENT_loop
-.end_macro
-
-.macro	DRAW_SEGMENT_BY_ADDR(%addr, %len, %color)
-	li	$a0,	0
-	move	$a1,	%addr
-	move	$a2,	%len
-	DRAW_SEGMENT_loop:
-		sw	%color,	($a1)
-		addi	$a0,	$a0,	1
-		addi	$a1,	$a1,	4
-		blt	$a0,	$a2,	DRAW_SEGMENT_loop
-.end_macro
-
-.macro	COPY_SEQ(%tar, %src, %len)
-	li	$a0,	0
-	move	$a1,	%tar
-	move	$a2,	%src
-	COPY_SEQ_next:
-		lw	$a3,	($a2)
-		sw	$a3,	($a1)
-		addi	$a0,	$a0,	1
-		addi	$a1,	$a1,	4
-		addi	$a2,	$a2,	4
-		blt	$a0,	%len,	COPY_SEQ_next
-.end_macro
-
-.macro	SLEEP(%val)
-	li	$a0,	0
-	loopx:
-		nop
-		addi	$a0,	$a0,	1
-		blt	$a0,	%val,	loopx
-.end_macro
-
-.macro	WAIT_NEXT_KEY(%val)
-	lw	$a1,	keybroad_addr
-
-#	li	$a3,	1000000
-#	li	$a3,	100000
-	WAIT_NEXT_KEY_wait:
-		SLEEP(100000)
-#		li	$a2,	0
-#		loopx:
-#			addi	$a2,	$a2,	1
-#			blt	$a2,	$a3,	loopx
-		lw	%val,	($a1)
-		beq	%val,	$zero,	WAIT_NEXT_KEY_wait
-	lw	%val,	4($a1)
-.end_macro
-
-.macro	SHIFT_WORD(%add, %pos, %res)
-	sll	$a0,	%pos,	2
-	add	%res,	%add,	$a0
-.end_macro
-
-.macro	LOAD_ARRAY_ELEMENT(%add, %pos, %res)
-	SHIFT_WORD(%add, %pos, %res)
-	lw	%res,	(%res)
-.end_macro
-
-.macro	STORE_ARRAY_ELEMENT(%add, %pos, %val)
-	SHIFT_WORD(%add, %pos, $a1)
-	sw	%val,	($a1)
-.end_macro
-
-.macro	CHECKBIT(%val, %pos, %res)
-	srlv 	$a0,	%val,	%pos
-	and	%res,	$a0,	1
-.end_macro
-
-.macro	SETBIT (%val, %pos)
-	li	$a0,	1
-	sllv 	$a0,	$a0,	%pos
-	or	%val,	%val,	$a0
-.end_macro
-
-.macro	STORE_RA
-	addi	$sp,	$sp,	-4
-	sw	$ra,	0($sp)
-.end_macro
-	
-.macro	RESTORE_RA
-	lw	$ra,	0($sp)
-	addi	$sp,	$sp,	4
-.end_macro
-
-.macro	PRINT_INT (%val)
-	li	$v0,	1
-	move	$a0,	%val
-	syscall
-.end_macro
-
-.macro	PRINT_CHARI (%val)
-	li	$v0,	11
-	li	$a0,	%val
-	syscall
-.end_macro
-
-.macro	PRINT_CHAR (%val)
-	li	$v0,	11
-	move	$a0,	%val
-	syscall
-.end_macro
-
-.macro	PRINT_STR (%val)
-	li	$v0,	4
-	move	$a0,	%val
-	syscall
-.end_macro
-
+	.include "macros.asm"
 #####################################################################
 #####################################################################
 	.data
 main_matrix:	.space	64
 tmp_matrix:	.space	64
+cur_max:	.word	2
+tar_score:	.word	512
 
 # tmp_value:	.space	64
 tmp_moving:	.space	64
@@ -170,7 +22,7 @@ up_index:	.space	64
 down_index:	.space	64
 left_addr:	.space	64
 right_addr:	.space 	64
-up_addr:	.space	64
+up_addr:		.space	64
 down_addr:	.space	64
 
 ### constants
@@ -188,12 +40,15 @@ level_color:	.word	0xFF0000, 0x00FF00, 0x0000FF
 level_size:	.word	1, 2, 4
 
 msg_mat_boundry:	.asciiz	"================================="
+msg_win_congrad:	.asciiz	"YOU WIN"
+msg_fail:	.asciiz	"GAME OVER"
 
 #####################################################################
 #####################################################################
 	.text
 Main:
 
+	jal	cleanDisplay
 	jal	initializeIndex
 	jal	addNextRandom2Matrix
 	jal	printMainMatrix	
@@ -201,7 +56,6 @@ Main:
 	jal	drawMainMat
 
 loop:
-	
 	la	$t0,	main_matrix
 	la	$t1,	tmp_matrix
 	lw	$t2,	mat_length
@@ -237,19 +91,98 @@ move_direction:
 	jal	compareSequence
 	bne	$v0,	$zero,	loop
 	jal	addNextRandom2Matrix
-	
-	### check GG condition
 	jal	drawMainMat
 	jal	printMainMatrix	
+	
+	### check GG condition
+	jal	checkGameState
+
 	j	loop
 	
+	
+Win:
+	la	$a0,	msg_win_congrad
+	li	$a1,	1
+	li	$v0,	55
+	syscall
+	j	Exit
+
+Fail:
+	la	$a0,	msg_fail
+	li	$a1,	0
+	li	$v0,	55
+	syscall
+	j	Exit
 
 Exit:
 	li	$v0,	10
 	syscall
 
+checkGameState:
+	STORE_RA
+	
+	# win
+	lw	$t0,	cur_max
+	lw	$t1,	tar_score
+	bge	$t0,	$t1,	Win
+	
+	# available space
+	lw	$t0,	ava_count
+	bgt	$t0,	$zero,	 checkGameState_alive
+	
+	# available operation
+	la	$a0,	left_addr
+	jal	checkDirectionWork
+	beq	$v0,	$zero,	checkGameState_alive
+	
+	la	$a0,	right_addr
+	jal	checkDirectionWork
+	beq	$v0,	$zero,	checkGameState_alive
+	
+	la	$a0,	up_addr
+	jal	checkDirectionWork
+	beq	$v0,	$zero,	checkGameState_alive
+	
+	la	$a0,	down_addr
+	jal	checkDirectionWork
+	beq	$v0,	$zero,	checkGameState_alive
+	j	Fail	
+
+checkGameState_alive:
+	RESTORE_RA
+	jr	$ra
 
 
+###
+# input: $a0: direction address
+# output: $v0: 1=stock,	0=can move
+checkDirectionWork:
+	STORE_RA
+
+	move	$t0,	$a0	# move direction
+	la	$t1,	main_matrix
+	la	$t2,	tmp_matrix
+	lw	$t3,	mat_length
+	COPY_SEQ($t2, $t1, $t3)
+	
+	move	$a0,	$t0
+	jal	moveOperation
+	
+	la	$a0,	main_matrix
+	la	$a1,	tmp_matrix
+	lw	$a2,	mat_length
+	jal	compareSequence		
+	
+	la	$t0,	main_matrix
+	la	$t1,	tmp_matrix
+	lw	$t2,	mat_length
+	COPY_SEQ($t0, $t1, $t2)
+	
+	RESTORE_RA
+	jr	$ra
+
+
+#######################################################
 ###
 # input: $a0: src1, $a1: src2,	$a2: length
 # output: $v0: 0:different, 1:the same
@@ -461,7 +394,11 @@ addNextRandom2Matrix:
 	lw	$t2,	($t0)
 	li	$t2,	2
 	sw	$t2,	($t0)
-	
+
+	lw	$t0,	ava_count
+	addi	$t0,	$t0,	-1
+	sw	$t0,	ava_count
+
 	RESTORE_RA
 	jr	$ra
 
@@ -531,8 +468,14 @@ moveOperation_loop1:
 		beq	$t6,	$zero,	moveOperation_pass_through_zero
 		# not equal to zero => check merge
 		bne	$t5,	$t6,	moveOperation_stock
-		# merge equal value ### audio may add here
+		# merge equal value 
 		sll	$t5,	$t5,	1		# $t5 = new value to store
+		
+		lw	$t8,	cur_max
+		ble	$t5,	$t8,	moveOperation_merge_not_update_max
+		sw	$t5,	cur_max
+		MAKE_SOUND($t8)		
+		moveOperation_merge_not_update_max:
 		addi	$t4,	$t4,	1
 		j	moveOperation_store_value
 
@@ -639,13 +582,6 @@ drawSquare_loop:
 
 	jr	$ra
 
-removeMoved:
-	la	$t0,	tmp_moving
-	lw	$t1,	mat_nrow
-	li	$t2,	0	# i
-	li	$t3,	0	# 
-loop0:
-	
 	
 
 ### drawMainMat
@@ -665,16 +601,6 @@ drawMainMat:
 	# draw background
 	jal	cleanDisplay
 	jal	drawFrame
-#	lw	$a2,	display_width
-#	srl	$a0,	$a2,	1
-#	srl	$a1,	$a2,	1
-#	srl	$a2,	$a2,	1
-#	lw	$a3,	frame_width
-#	sub	$a2,	$a2,	$a3
-#	lw	$a3,	back_color
-#	jal	drawSquare
-	# input: $a0:x, $a1:y, $a2:size, $a3:color
-	
 
 drawMainMat_loop:
 
