@@ -1,37 +1,49 @@
 	.include "macros.asm"
 #####################################################################
+#	2048
+# Program require 
+#   1. Bitmap Display
+#   2. Keyboary and Display MMIO Simulator
+#
+# Setting in Bitmap Display
+#	unit width: 8,	unit height: 8
+#	display width: 512,	display height: 512
+#	base address: $gp
+#
+# Warning: monitor's flashing rate may effect the fluency of the animation
+#	To increase speed of animation, set "moving_step" to "3"
+#
 #####################################################################
 	.data
+moving_step:	.word	15		# number of frame involve in each motion
+					# set to 3 if display cannot flash fluently
+	
 main_matrix:	.space	64
 tmp_matrix:	.space	64		# privious state 
-cur_max:	.word	2
-upgrade_flag:	.word	0
-tar_score:	.word	512
+cur_max:	.word	2			# current maximum
+upgrade_flag:	.word	0		# flag: whether cur_max has been updated
+tar_score:	.word	512		# score for finish the game
 
-#tmp_value:	.space	64
-tmp_moving:	.space	64
+tmp_moving:	.space	64		# record the moving pattern
 moving_pairs:	.space	288		# srcX,srcY,tarX,tarY,color,size
 moving_len:	.word	0		# length of moving_pairs
-moving_step:	.word	3
 
-#test_value:	.word	2, 2, 4, 0
-test_value:	.word	0, 0, 2, 2
 
 ### 
 ava_count:	.word	0	# available count
 ava_index:	.space	64	# available index array
-left_index:	.space	64
+left_index:	.space	64	# index read the matrix from different direction
 right_index:	.space 	64
 up_index:	.space	64
 down_index:	.space	64
-left_addr:	.space	64
+left_addr:	.space	64	# address of matrix read in different direction
 right_addr:	.space 	64
 up_addr:		.space	64
 down_addr:	.space	64
 
 ### constants
 mat_nrow:	.word	4	# total number of row
-mat_length:	.word	16
+mat_length:	.word	16	# total length of matrix
 keybroad_addr:	.word	0xffff0000
 
 display_width:	.word	64
@@ -134,7 +146,9 @@ Exit:
 	li	$v0,	10
 	syscall
 
-
+####################################################################
+############################# function #############################
+### play audio if update the current maximum value
 playAudio:
 	lw	$t0,	upgrade_flag
 	bne	$t0,	1,	playAudio_skip
@@ -144,7 +158,7 @@ playAudio:
 	playAudio_skip:
 	jr	$ra
 
-###
+### draw animation through the moving records
 drawAnimation:
 	addi	$sp,	$sp,	-28
 	sw	$ra,	0($sp)
@@ -206,7 +220,7 @@ drawAnimation:
 
 			addi	$s4,	$s4,	1
 			blt	$s4,	$s1,	drawAnimat_plot_loop
-		SLEEP(100)
+		SLEEP(2500)
 		blt	$s3,	$s2,	drawAnimat_loop0
 	
 	li	$s4,	0		# $s4=j	element
@@ -475,9 +489,6 @@ compareSequence:
 		
 compareSequence_return:
 	jr	$ra
-
-####################################################################
-############################# function #############################
 
 ### initialize the indexes of different order
 initializeIndex:
