@@ -3,12 +3,16 @@
 #####################################################################
 	.data
 main_matrix:	.space	64
-tmp_matrix:	.space	64
+tmp_matrix:	.space	64		# privious state 
 cur_max:	.word	2
+upgrade_flag:	.word	0
 tar_score:	.word	512
 
-# tmp_value:	.space	64
+#tmp_value:	.space	64
 tmp_moving:	.space	64
+moving_pairs:	.space	288		# srcX,srcY,tarX,tarY,color,size
+moving_len:	.word	0		# length of moving_pairs
+moving_step:	.word	3
 
 #test_value:	.word	2, 2, 4, 0
 test_value:	.word	0, 0, 2, 2
@@ -55,7 +59,7 @@ Main:
 	jal	drawFrame
 	jal	drawMainMat
 
-loop:
+Main_loop:
 	la	$t0,	main_matrix
 	la	$t1,	tmp_matrix
 	lw	$t2,	mat_length
@@ -66,21 +70,25 @@ loop:
 	PRINT_CHARI(0xa)
 	bne	$t0,	0x77,	check_down	# w = up
 	la	$a0,	up_addr
+	la	$s0,	up_index
 	j	move_direction
 	
 check_down:
 	bne	$t0,	0x73,	check_left	# s = down
 	la	$a0,	down_addr
+	la	$s0,	down_index
 	j	move_direction
 	
 check_left:
 	bne	$t0,	0x61,	check_right	# a = left
 	la	$a0,	left_addr
+	la	$s0,	left_index
 	j	move_direction
 
 check_right:
-	bne	$t0,	0x64,	loop		# d = right
+	bne	$t0,	0x64,	Main_loop	# d = right
 	la	$a0,	right_addr
+	la	$s0,	right_index
 	j	move_direction
 
 move_direction:	
@@ -89,15 +97,23 @@ move_direction:
 	la	$a1,	tmp_matrix
 	lw	$a2,	mat_length
 	jal	compareSequence
-	bne	$v0,	$zero,	loop
+	bne	$v0,	$zero,	Main_loop	# no state change movement
+	
+	###	animate here
+	# move index conversion
+	move	$a0,	$s0
+	jal	convertTmpMoving
+	move	$a0,	$s0
+	jal	calculateMovingPairs
+	jal	drawAnimation
+	jal	playAudio
+	###
+	
 	jal	addNextRandom2Matrix
 	jal	drawMainMat
 	jal	printMainMatrix	
-	
-	### check GG condition
 	jal	checkGameState
-
-	j	loop
+	j	Main_loop
 	
 	
 Win:
@@ -118,8 +134,253 @@ Exit:
 	li	$v0,	10
 	syscall
 
+
+playAudio:
+	lw	$t0,	upgrade_flag
+	bne	$t0,	1,	playAudio_skip
+	lw	$t1,	cur_max
+	MAKE_SOUND($t1)
+	sw	$zero,	upgrade_flag
+	playAudio_skip:
+	jr	$ra
+
+###
+drawAnimation:
+	addi	$sp,	$sp,	-28
+	sw	$ra,	0($sp)
+	sw	$s0,	4($sp)
+	sw	$s1,	8($sp)
+	sw	$s2,	12($sp)
+	sw	$s3,	16($sp)	
+	sw	$s4,	20($sp)
+	sw	$s5,	24($sp)	
+	
+	la	$s0,	moving_pairs
+	lw	$s1,	moving_len
+	lw	$s2,	moving_step
+	
+	li	$s3,	0		# $s3=i current moving step
+
+	drawAnimat_loop0:
+		li	$s4,	0		# $s4=j	element
+		drawAnimat_remove_loop:
+			li	$t0,	6
+			mul	$t0,	$t0,	$s4
+			SHIFT_WORD($s0, $t0, $s5)	# $s5= address of j moving pair
+			
+			move	$a0,	$s5
+			move	$a1,	$s3
+			jal	calculateCurrentPosition
+		
+			li	$t0,	5	
+			LOAD_ARRAY_ELEMENT($s5, $t0, $t0)
+			move	$a0,	$v0
+			move	$a1,	$v1
+			move	$a2,	$t0
+			lw	$a3,	back_color
+			jal	drawSquare
+		
+			addi	$s4,	$s4,	1
+			blt	$s4,	$s1,	drawAnimat_remove_loop
+
+		addi	$s3,	$s3,	1
+		li	$s4,	0		# $s4=j	element	
+		drawAnimat_plot_loop:
+			li	$t0,	6
+			mul	$t0,	$t0,	$s4
+			SHIFT_WORD($s0, $t0, $s5)	# $s5= address of j moving pair		
+
+			move	$a0,	$s5
+			move	$a1,	$s3
+			jal	calculateCurrentPosition
+
+			li	$t0,	4	#color
+			li	$t1,	5	#size
+			LOAD_ARRAY_ELEMENT($s5, $t0, $t0)
+			LOAD_ARRAY_ELEMENT($s5, $t1, $t1)
+			move	$a0,	$v0
+			move	$a1,	$v1
+			move	$a3,	$t0
+			move	$a2,	$t1
+			jal	drawSquare
+
+			addi	$s4,	$s4,	1
+			blt	$s4,	$s1,	drawAnimat_plot_loop
+		SLEEP(100)
+		blt	$s3,	$s2,	drawAnimat_loop0
+	
+	li	$s4,	0		# $s4=j	element
+	drawAnimat_remove_final_loop:
+		li	$t0,	6
+		mul	$t0,	$t0,	$s4
+		SHIFT_WORD($s0, $t0, $s5)	# $s4= address of j moving pair
+		
+		move	$a0,	$s5
+		move	$a1,	$s3
+		jal	calculateCurrentPosition
+		
+		li	$t0,	5	
+		LOAD_ARRAY_ELEMENT($s5, $t0, $t0)
+		move	$a0,	$v0
+		move	$a1,	$v1
+		move	$a2,	$t0
+		lw	$a3,	back_color
+		jal	drawSquare
+		
+		addi	$s4,	$s4,	1
+		blt	$s4,	$s1,	drawAnimat_remove_final_loop
+	
+	lw	$ra,	0($sp)
+	lw	$s0,	4($sp)
+	lw	$s1,	8($sp)
+	lw	$s2,	12($sp)
+	lw	$s3,	16($sp)	
+	lw	$s4,	20($sp)
+	lw	$s5,	24($sp)	
+	addi	$sp,	$sp,	28	
+	jr	$ra
+
+		
+
+# input: $a0: address of a moving pair element, $a1:step
+# output: $v0=x, $v1=y
+calculateCurrentPosition:
+	move	$t0,	$a0	# $t0=moving pair
+	move	$t1,	$a1	# $t1=current step
+	
+	li	$t2,	0	# srcX
+	li	$t3,	1	# srcY
+	li	$t4,	2	# tarX
+	li	$t5,	3	# tarY
+	LOAD_ARRAY_ELEMENT($t0, $t2, $t2)
+	LOAD_ARRAY_ELEMENT($t0, $t3, $t3)
+	LOAD_ARRAY_ELEMENT($t0, $t4, $t4)
+	LOAD_ARRAY_ELEMENT($t0, $t5, $t5)
+	
+	lw	$t9,	moving_step
+
+	beq	$t2,	$t4,	y_shift
+		move	$v1,	$t3
+		sub	$t6,	$t4,	$t2
+		div	$t6,	$t9
+		mflo	$v0
+		mul	$v0,	$v0,	$t1
+		add	$v0,	$v0,	$t2
+		j	return
+		
+	y_shift:
+		move	$v0,	$t2
+		sub	$t6,	$t5,	$t3
+		div	$t6,	$t9
+		mflo	$v1
+		mul	$v1,	$v1,	$t1
+		add	$v1,	$v1,	$t3
+
+	return:
+		jr	$ra
+
+
+### convert tmp_moving to index
+# input: $a0=direction index
+convertTmpMoving:
+	move	$t0,	$a0			# $t0= direction index
+	move	$t9,	$t0
+	la	$t1,	tmp_moving
+	lw	$t2,	mat_nrow
+	li	$t3,	0			# $t3=i
+	convertTmpMoving_loop0:
+		li	$t4,	0		# $t4=j
+		convertTmpMoving_loop1:
+			LOAD_ARRAY_ELEMENT($t1, $t4, $t5)
+			LOAD_ARRAY_ELEMENT($t0, $t5, $t5)
+			STORE_ARRAY_ELEMENT($t1, $t4, $t5)
+			addi	$t4,	$t4,	1
+			blt	$t4,	$t2,	convertTmpMoving_loop1
+
+		SHIFT_WORD($t0, $t2, $t0)	
+		SHIFT_WORD($t1, $t2, $t1)
+		addi	$t3,	$t3,	1
+		blt	$t3,	$t2,	convertTmpMoving_loop0
+		
+	jr	$ra
+
+### calculate moving pairs
+# input: $a0=direction index
+calculateMovingPairs:
+	addi	$sp,	$sp,	-36
+	sw	$ra,	0($sp)
+	sw	$s0,	4($sp)
+	sw	$s1,	8($sp)
+	sw	$s2,	12($sp)
+	sw	$s3,	16($sp)	
+	sw	$s4,	20($sp)
+	sw	$s5,	24($sp)
+	sw	$s6,	28($sp)	
+	sw	$s7,	32($sp)		
+		
+	move	$s0,	$a0		# $s0 = moving direction index (source)
+	la	$s1,	tmp_moving	# $s1 = moving target index
+	lw	$s2,	mat_length
+	la	$s3,	moving_pairs
+	li	$s4,	0		# moving pairs length
+	li	$s5,	0		# $s5=i
+	
+	calculateMovingPairs_loop0:
+		LOAD_ARRAY_ELEMENT($s0, $s5, $s6)	# $s6 = src index
+		LOAD_ARRAY_ELEMENT($s1, $s5, $s7)	# $s7 = tar index
+		beq	$s6,	$s7,	 calculateMovingPairs_next	# not moving case
+	
+		move	$a0,	$s6
+		jal	index2Position
+		li	$t0,	0
+		li	$t1,	1
+		STORE_ARRAY_ELEMENT($s3, $t0, $v0)	# store srcX, srcY
+		STORE_ARRAY_ELEMENT($s3, $t1, $v1)
+	
+		move	$a0,	$s7
+		jal	index2Position
+		li	$t0,	2
+		li	$t1,	3
+		STORE_ARRAY_ELEMENT($s3, $t0, $v0)	# store tarX, tarY
+		STORE_ARRAY_ELEMENT($s3, $t1, $v1)
+	
+		la	$t0,	tmp_matrix
+		LOAD_ARRAY_ELEMENT($t0, $s6, $t1)
+		GET_COLOR_SIZE($t1, $t2, $t3)		# $t2 = color, $t3 = size
+		li	$t0,	4
+		li	$t1,	5
+		STORE_ARRAY_ELEMENT($s3, $t0, $t2)
+		STORE_ARRAY_ELEMENT($s3, $t1, $t3)
+		addi	$s3,	$s3,	24
+		addi	$s4,	$s4,	1
+	
+		calculateMovingPairs_next:
+		addi	$s5,	$s5,	1
+		blt	$s5,	$s2,	calculateMovingPairs_loop0
+
+	sw	$s4,	moving_len
+
+	lw	$ra,	0($sp)
+	lw	$s0,	4($sp)
+	lw	$s1,	8($sp)
+	lw	$s2,	12($sp)
+	lw	$s3,	16($sp)	
+	lw	$s4,	20($sp)
+	lw	$s5,	24($sp)
+	lw	$s6,	28($sp)	
+	lw	$s7,	32($sp)		
+	addi	$sp,	$sp,	36
+	jr	$ra
+
+
+### checkGameState
+# return if game can continue
 checkGameState:
-	STORE_RA
+
+	addi	$sp,	$sp,	-12
+	sw	$ra,	($sp)
+	sw	$s0,	4($sp)
+	sw	$s1,	8($sp)	
 	
 	# win
 	lw	$t0,	cur_max
@@ -131,29 +392,39 @@ checkGameState:
 	bgt	$t0,	$zero,	 checkGameState_alive
 	
 	# available operation
+	lw	$s0,	cur_max
+	lw	$s1,	upgrade_flag
+	
 	la	$a0,	left_addr
 	jal	checkDirectionWork
-	beq	$v0,	$zero,	checkGameState_alive
+	beq	$v0,	$zero,	checkGameState_restore_max
 	
 	la	$a0,	right_addr
 	jal	checkDirectionWork
-	beq	$v0,	$zero,	checkGameState_alive
+	beq	$v0,	$zero,	checkGameState_restore_max
 	
 	la	$a0,	up_addr
 	jal	checkDirectionWork
-	beq	$v0,	$zero,	checkGameState_alive
+	beq	$v0,	$zero,	checkGameState_restore_max
 	
 	la	$a0,	down_addr
 	jal	checkDirectionWork
-	beq	$v0,	$zero,	checkGameState_alive
+	beq	$v0,	$zero,	checkGameState_restore_max
 	j	Fail	
+	checkGameState_restore_max:
+		sw	$s0,	cur_max
+		sw	$s1,	upgrade_flag
 
 checkGameState_alive:
-	RESTORE_RA
+
+	lw	$ra,	($sp)
+	lw	$s0,	4($sp)
+	lw	$s1,	8($sp)	
+	addi	$sp,	$sp,	12
 	jr	$ra
 
 
-###
+### checkDirectionWork
 # input: $a0: direction address
 # output: $v0: 1=stock,	0=can move
 checkDirectionWork:
@@ -283,7 +554,6 @@ initializeIndex:
 
 
 ### convert index array to actual address array
-# current version only change 4, but can be extended to change whole
 indexArray2AddressArray:
 	la	$t0,	main_matrix
 	lw	$t1,	mat_length
@@ -450,7 +720,7 @@ moveOperation:
 
 moveOperation_loop0:	
 	li	$t2,	0		# $t2 = lowest bound
-	li	$t3,	1		# $t3 = i skip first 
+	li	$t3,	0		# $t3 = i 
 moveOperation_loop1:
 	LOAD_ARRAY_ELEMENT($s1, $t3, $t5)
 	lw	$t5,	($t5)		# $t5 = current value
@@ -460,6 +730,7 @@ moveOperation_loop1:
 	beq	$t5,	$zero,	moveOperation_next1	# case [i]==0
 	
 	addi	$t4,	$t3,	-1	# $t4 = j
+	blt	$t4,	$zero,	moveOperation_next1
 	moveOperation_loop2:
 
 		LOAD_ARRAY_ELEMENT($s1, $t4, $t6)	
@@ -474,7 +745,9 @@ moveOperation_loop1:
 		lw	$t8,	cur_max
 		ble	$t5,	$t8,	moveOperation_merge_not_update_max
 		sw	$t5,	cur_max
-		MAKE_SOUND($t8)		
+		li	$t9,	1
+		sw	$t9,	upgrade_flag
+	
 		moveOperation_merge_not_update_max:
 		addi	$t4,	$t4,	1
 		j	moveOperation_store_value
@@ -599,7 +872,7 @@ drawMainMat:
 	li	$s2,	0
 	
 	# draw background
-	jal	cleanDisplay
+	#jal	cleanDisplay
 	jal	drawFrame
 
 drawMainMat_loop:

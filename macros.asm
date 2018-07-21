@@ -95,7 +95,7 @@
 .macro	WAIT_NEXT_KEY(%val)
 	lw	$a1,	keybroad_addr
 	WAIT_NEXT_KEY_wait:
-		SLEEP(10000)
+		SLEEP(1000)
 		lw	%val,	($a1)
 		beq	%val,	$zero,	WAIT_NEXT_KEY_wait
 	lw	%val,	4($a1)
