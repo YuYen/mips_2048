@@ -6,9 +6,17 @@
 #   2. Keyboary and Display MMIO Simulator
 #
 # Setting in Bitmap Display
-#	unit width: 8,	unit height: 8
-#	display width: 512,	display height: 512
+#	unit width: 8,	
+#	unit height: 8,
+#	display width: 512,
+#	display height: 512,
 #	base address: $gp
+# 
+# Play Using Keyboard and Display MMIO Simulator
+#	up: "w", 
+#	down: "s",
+#	left: "a", 
+#	right: "d"
 #
 # Warning: monitor's flashing rate may effect the fluency of the animation
 #	To increase speed of animation, set "moving_step" to "3"
@@ -60,7 +68,7 @@ msg_win_congrad:	.asciiz	"YOU WIN"
 msg_fail:	.asciiz	"GAME OVER"
 
 #####################################################################
-#####################################################################
+##################      Main Process    #############################
 	.text
 Main:
 
