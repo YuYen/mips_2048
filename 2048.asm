@@ -1,6 +1,5 @@
-	.include "macros.asm"
 #####################################################################
-#	2048
+#	MIPS 2048 on MARS
 # Program require 
 #   1. Bitmap Display
 #   2. Keyboary and Display MMIO Simulator
@@ -18,17 +17,15 @@
 #	left: "a", 
 #	right: "d"
 #
-# Warning: monitor's flashing rate may effect the fluency of the animation
-#	To increase speed of animation, set "moving_step" to "3"
-#
 #####################################################################
+
+	.include "macros.asm"
 	.data
 moving_step:	.word	15		# number of frame involve in each motion
-					# set to 3 if display cannot flash fluently
-	
+					# set to 3 if display cannot flash fluently	
 main_matrix:	.space	64
 tmp_matrix:	.space	64		# privious state 
-cur_max:	.word	2			# current maximum
+cur_max:	.word	2		# current maximum
 upgrade_flag:	.word	0		# flag: whether cur_max has been updated
 tar_score:	.word	512		# score for finish the game
 
@@ -46,7 +43,7 @@ up_index:	.space	64
 down_index:	.space	64
 left_addr:	.space	64	# address of matrix read in different direction
 right_addr:	.space 	64
-up_addr:		.space	64
+up_addr:	.space	64
 down_addr:	.space	64
 
 ### constants
@@ -119,7 +116,7 @@ move_direction:
 	jal	compareSequence
 	bne	$v0,	$zero,	Main_loop	# no state change movement
 	
-	###	animate here
+	###	animation
 	# move index conversion
 	move	$a0,	$s0
 	jal	convertTmpMoving
