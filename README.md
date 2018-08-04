@@ -1,5 +1,7 @@
 ## MARS Environment Setup
 
+<img align="left" width="433" height="330" src="https://github.com/YuYen/mips_2048/blob/assets/animation.gif">
+
 #### Bitmap Display
 
 	unit width: 8
