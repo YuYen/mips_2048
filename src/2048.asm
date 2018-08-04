@@ -21,10 +21,9 @@
 
 	.include "macros.asm"
 	.data
-moving_step:	.word	15		# number of frame involve in each motion
-					# set to 3 if display cannot flash fluently	
-main_matrix:	.space	64
-tmp_matrix:	.space	64		# privious state 
+
+main_matrix:	.space	64		# main matrix of the game
+tmp_matrix:	.space	64		# matrix of privious state 
 cur_max:	.word	2		# current maximum
 upgrade_flag:	.word	0		# flag: whether cur_max has been updated
 tar_score:	.word	512		# score for finish the game
@@ -32,8 +31,8 @@ tar_score:	.word	512		# score for finish the game
 tmp_moving:	.space	64		# record the moving pattern
 moving_pairs:	.space	288		# srcX,srcY,tarX,tarY,color,size
 moving_len:	.word	0		# length of moving_pairs
-
-
+moving_step:	.word	15		# number of frame involve in each motion
+					# set to 3 if display cannot flash fluently
 ### 
 ava_count:	.word	0	# available count
 ava_index:	.space	64	# available index array
@@ -61,7 +60,7 @@ level_color:	.word	0xFF0000, 0x00FF00, 0x0000FF
 level_size:	.word	1, 2, 4
 
 msg_mat_boundry:	.asciiz	"================================="
-msg_win_congrad:	.asciiz	"YOU WIN"
+msg_win:	.asciiz	"YOU WIN"
 msg_fail:	.asciiz	"GAME OVER"
 
 #####################################################################
@@ -122,9 +121,9 @@ move_direction:
 	jal	convertTmpMoving
 	move	$a0,	$s0
 	jal	calculateMovingPairs
+	
 	jal	drawAnimation
 	jal	playAudio
-	###
 	
 	jal	addNextRandom2Matrix
 	jal	drawMainMat
@@ -134,7 +133,7 @@ move_direction:
 	
 	
 Win:
-	la	$a0,	msg_win_congrad
+	la	$a0,	msg_win
 	li	$a1,	1
 	li	$v0,	55
 	syscall
