@@ -1,6 +1,6 @@
-## MARS Environment Setup
+<img align="left" width="540" height="410" src="https://github.com/YuYen/mips_2048/blob/assets/gaming_animation.gif">
 
-<img align="left" width="433" height="330" src="https://github.com/YuYen/mips_2048/blob/assets/animation.gif">
+## MARS Environment Setup
 
 #### Bitmap Display
 
@@ -16,3 +16,5 @@
 	down: "s"
 	left: "a"
 	right: "d"
+
+<sup> MARS: http://courses.missouristate.edu/KenVollmar/mars/ </sup>
