@@ -1,5 +1,5 @@
 #####################################################################
-#	MIPS 2048 on MARS
+#	MIPS 2048 on MARS4.5
 # Program require 
 #   1. Bitmap Display
 #   2. Keyboary and Display MMIO Simulator
@@ -443,7 +443,7 @@ checkGameState_alive:
 	jr	$ra
 
 
-### checkDirectionWork
+### checkDirectionWork: check whether the specified direction make any change
 # input: $a0: direction address
 # output: $v0: 1=stock,	0=can move
 checkDirectionWork:
@@ -471,9 +471,7 @@ checkDirectionWork:
 	RESTORE_RA
 	jr	$ra
 
-
-#######################################################
-###
+### compareSequence: compare whether two sequences are the same
 # input: $a0: src1, $a1: src2,	$a2: length
 # output: $v0: 0:different, 1:the same
 compareSequence:
@@ -570,6 +568,8 @@ initializeIndex:
 
 
 ### convert index array to actual address array
+# input: $a0: index array for a direction
+# output: update the value in index array to actual address
 indexArray2AddressArray:
 	la	$t0,	main_matrix
 	lw	$t1,	mat_length
@@ -586,43 +586,7 @@ indexArray2AddressArray:
 	
 	jr	$ra
 
-### print a sequence of int
-# input: $a0: target array, $a1: length
-printSequence:
-	move	$t9,	$a0
-	move	$t0,	$a1
-	li	$t1,	0xa
-	PRINT_CHAR($t1)
-	li	$t1,	0
-	
-	printSequen_loop:
-		lw	$t3,	($t9)
-		
-		PRINT_INT( $t3)
-		addi	$t1,	$t1,	1
-		addi	$t9,	$t9,	4
-		blt	$t1,	$t0,	printSequen_loop
-	jr	$ra
-
-### print main matrix using different order sequence
-printSequenceByIndex:
-	move	$t9,	$a0
-	li	$t0,	0xa
-	PRINT_CHAR($t0)
-	lw	$t0,	mat_length
-	li	$t1,	0
-	
-	printSequenceByIndex_loop:
-		lw	$t2,	($t9)
-		lw	$t3,	($t2)
-		
-		PRINT_INT( $t3)
-		addi	$t1,	$t1,	1
-		addi	$t9,	$t9,	4
-		blt	$t1,	$t0,	printSequenceByIndex_loop
-	jr	$ra
-
-### print current main matrix
+### printMainMatrix: print current main matrix to I/O
 printMainMatrix:
 	li	$t4,	0xa
 	PRINT_CHAR($t4)
@@ -662,8 +626,7 @@ printMainMatrix:
 	PRINT_STR($t5)
 	jr	$ra
 
-
-### add next random 2 to matrix
+### add a new block to matrix at random position
 addNextRandom2Matrix:
 	STORE_RA
 	jal	findAvailableIndex	
@@ -688,8 +651,7 @@ addNextRandom2Matrix:
 	RESTORE_RA
 	jr	$ra
 
-### find available space
-# find the index and number of zero in main_matrix
+### find available space: find the index and number of zero in main_matrix
 # result store in ava_count, ava_index
 findAvailableIndex:
 	la	$t0,	main_matrix		
@@ -802,6 +764,7 @@ moveOperation_loop1:
 	jr	$ra
 
 
+### index2Position: index on the matrix to the (x, y) position 
 # input: $a0: position index
 # output: $v0:x, $v1:y
 index2Position:
@@ -824,10 +787,7 @@ index2Position:
 	
 	jr	$ra
 
-
-
-########################################################
-### draw
+### drawFrame: drame the boundry frame
 drawFrame:
 	li	$t0,	0	
 	li	$t1,	0	
@@ -871,7 +831,6 @@ drawSquare_loop:
 
 	jr	$ra
 
-	
 
 ### drawMainMat
 drawMainMat:
@@ -886,9 +845,7 @@ drawMainMat:
 	la	$s0,	main_matrix
 	lw	$s1,	mat_length
 	li	$s2,	0
-	
-	# draw background
-	#jal	cleanDisplay
+
 	jal	drawFrame
 
 drawMainMat_loop:
@@ -920,7 +877,7 @@ drawMainMat_next:
 	addi	$sp,	$sp,	24
 	jr	$ra
 	
-### clean display to back_color
+### cleanDisplay: clean display to back_color
 cleanDisplay:
 	move	$t0,	$gp
 	lw	$t1,	display_width

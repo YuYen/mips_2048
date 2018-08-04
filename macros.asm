@@ -1,4 +1,4 @@
-
+# make sound based on the current maximum
 .macro	MAKE_SOUND(%val)
 	li	$a0,	0
 	move	$a1,	%val
@@ -18,6 +18,7 @@
 	syscall
 .end_macro
 
+# get color & size based on the current maximum
 .macro	GET_COLOR_SIZE(%val, %color, %size)
 	li	$a0,	2
 	li	$a2,	0
@@ -39,6 +40,7 @@
 	LOAD_ARRAY_ELEMENT($a1,	%color, %color)
 .end_macro
 
+# convert x, y axis to plot address
 .macro	GET_PLOT_ADDRESS(%x, %y, %addr)
 	lw	$a0,	display_width
 	mulu 	%addr,	%y,	$a0
@@ -47,6 +49,7 @@
 	addu	%addr,	%addr,	$gp
 .end_macro
 
+# draw a segment which starts from (x, y) 
 .macro	DRAW_SEGMENT_BY_POINT(%x, %y, %len, %color)
 	GET_PLOT_ADDRESS(%x, %y, $a1)
 	li	$a0,	0
@@ -58,6 +61,7 @@
 		blt	$a0,	$a2,	DRAW_SEGMENT_loop
 .end_macro
 
+# draw a segment which starts from the address
 .macro	DRAW_SEGMENT_BY_ADDR(%addr, %len, %color)
 	li	$a0,	0
 	move	$a1,	%addr
@@ -69,6 +73,7 @@
 		blt	$a0,	$a2,	DRAW_SEGMENT_loop
 .end_macro
 
+# copy sequence from src to tar
 .macro	COPY_SEQ(%tar, %src, %len)
 	li	$a0,	0
 	move	$a1,	%tar
@@ -82,6 +87,7 @@
 		blt	$a0,	%len,	COPY_SEQ_next
 .end_macro
 
+# sleep implement with nop loop
 .macro	SLEEP(%val)
 	li	$a0,	0
 	SLEEP_loopx:
@@ -90,6 +96,7 @@
 		blt	$a0,	%val,	SLEEP_loopx
 .end_macro
 
+# wait next key from keybroad simulator
 .macro	WAIT_NEXT_KEY(%val)
 	lw	$a1,	keybroad_addr
 	WAIT_NEXT_KEY_wait:
@@ -99,37 +106,31 @@
 	lw	%val,	4($a1)
 .end_macro
 
+# shift address in unit of word
 .macro	SHIFT_WORD(%add, %pos, %res)
 	sll	$a0,	%pos,	2
 	add	%res,	%add,	$a0
 .end_macro
 
+# load a word from an array
 .macro	LOAD_ARRAY_ELEMENT(%add, %pos, %res)
 	SHIFT_WORD(%add, %pos, %res)
 	lw	%res,	(%res)
 .end_macro
 
+# store a word into an array
 .macro	STORE_ARRAY_ELEMENT(%add, %pos, %val)
 	SHIFT_WORD(%add, %pos, $a1)
 	sw	%val,	($a1)
 .end_macro
 
-.macro	CHECKBIT(%val, %pos, %res)
-	srlv 	$a0,	%val,	%pos
-	and	%res,	$a0,	1
-.end_macro
-
-.macro	SETBIT (%val, %pos)
-	li	$a0,	1
-	sllv 	$a0,	$a0,	%pos
-	or	%val,	%val,	$a0
-.end_macro
-
+# push $ra into stack
 .macro	STORE_RA
 	addi	$sp,	$sp,	-4
 	sw	$ra,	0($sp)
 .end_macro
 
+# pop $ra from stack
 .macro	RESTORE_RA
 	lw	$ra,	0($sp)
 	addi	$sp,	$sp,	4
