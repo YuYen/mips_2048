@@ -26,7 +26,7 @@ main_matrix:	.space	64		# main matrix of the game
 tmp_matrix:	.space	64		# matrix of privious state 
 cur_max:	.word	2		# current maximum
 upgrade_flag:	.word	0		# flag: whether cur_max has been updated
-tar_score:	.word	512		# score for finish the game
+tar_score:	.word	2048		# score for finish the game
 
 tmp_moving:	.space	64		# record the moving pattern
 moving_pairs:	.space	288		# srcX,srcY,tarX,tarY,color,size
@@ -56,7 +56,7 @@ frame_color:	.word	0x6E2C00
 back_color:	.word	0x000000
 
 level_count:	.word	3
-level_color:	.word	0xFF0000, 0x00FF00, 0x0000FF
+level_color:	.word	0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00
 level_size:	.word	1, 2, 4
 
 msg_mat_boundry:	.asciiz	"================================="
