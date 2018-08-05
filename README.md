@@ -1,6 +1,19 @@
-<img align="left" width="540" height="410" src="https://github.com/YuYen/mips_2048/blob/assets/gaming_animation.gif">
+# 2048 implemented using mips
 
-## MARS Environment Setup
+<img align="right" width="540" height="410" src="https://github.com/YuYen/mips_2048/blob/assets/gaming_animation.gif">
+
+## File Description 
+
+- src/2048.asm: main procedure of the game.
+- src/marcos.asm: marcos used in the program.
+
+## Requirement
+
+The mips 2048 program require mips simulator, [MARS](http://courses.missouristate.edu/KenVollmar/mars/), to execute.
+
+### MARS Environment Setup 
+
+"Bitmap Display" and "Keyboard and Display MMIO Simulator" are used to display and control the direction.
 
 #### Bitmap Display
 
@@ -16,5 +29,4 @@
 	down: "s"
 	left: "a"
 	right: "d"
-
-<sup> MARS: http://courses.missouristate.edu/KenVollmar/mars/ </sup>
+	
