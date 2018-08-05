@@ -1,13 +1,9 @@
-# 2048 implemented using mips
+
+<img align="left" width="540" height="410" src="https://github.com/YuYen/mips_2048/blob/assets/gaming_animation.gif">
 
 ## MARS Environment Setup 
 
-- The mips 2048 program require mips simulator, [MARS](http://courses.missouristate.edu/KenVollmar/mars/), to execute.
-- "Bitmap Display" and "Keyboard and Display MMIO Simulator" are used to display and control the direction.
-
-<img align="right" width="540" height="410" src="https://github.com/YuYen/mips_2048/blob/assets/gaming_animation.gif">
-
-### Bitmap Display
+#### Bitmap Display
 
 	unit width: 8
 	unit height: 8
@@ -15,12 +11,15 @@
 	display height: 512
 	base address: $gp
 
-### Keyboard and Display MMIO Simulator
+#### Keyboard and Display MMIO Simulator
 
 	up: "w"
 	down: "s"
 	left: "a"
 	right: "d"
+
+- The mips 2048 program require mips simulator, [MARS](http://courses.missouristate.edu/KenVollmar/mars/), to execute.
+- "Bitmap Display" and "Keyboard and Display MMIO Simulator" are used to display and control the direction.
 
 ## File Description 
 
